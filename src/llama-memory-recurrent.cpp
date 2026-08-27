@@ -85,10 +85,13 @@ llama_memory_recurrent::llama_memory_recurrent(
         ggml_backend_buffer_type_t buft = ggml_backend_cpu_buffer_type();
 
         if (offload) {
-            auto * dev = model.dev_layer(i);
-            buft = ggml_backend_dev_buffer_type(dev);
+            bool offloaded = overrideMem.count(i) == 0;
+            if (offloaded) {
+                auto * dev = model.dev_layer(i);
+                buft = ggml_backend_dev_buffer_type(dev);
 
-            dev_name = ggml_backend_dev_name(dev);
+                dev_name = ggml_backend_dev_name(dev);
+            }
         }
 
         LLAMA_LOG_DEBUG("%s, layer %3d: dev = %s\n", __func__, i, dev_name);

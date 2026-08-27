@@ -6,6 +6,10 @@
 #include <map>
 #include <memory>
 #include <functional>
+#include <unordered_set>
+
+extern const std::unordered_set<int> overrideKv;
+extern const std::unordered_set<int> overrideMem;
 
 struct llama_ubatch;
 
