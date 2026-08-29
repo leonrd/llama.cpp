@@ -5,8 +5,8 @@
 // const std::unordered_set<int> overrideMem = {};
 
 // unsloth/Qwen3.8-27B-GGUF:Q8_0
-const std::unordered_set<int> overrideKv = {3,7,11,15,19,23,27,31,35,39,43,47,51,55,59,63};
-const std::unordered_set<int> overrideMem = {1,2,4,5,6,8,9,10,12,13,14,16,17,18,20,21,22,24,25,26,28,29,30,32,33,34,36,37,38,40,41,42,44,45,46,48,49,50,52,53,54,56,57,58,60,61,62};
+const std::unordered_set<int> overrideKv = {3,7,11,15,19,23,27,31,35,39,43,47,51,55,59};
+const std::unordered_set<int> overrideMem = {1,2,4,5,6,8,9,10,12,13,14,16,17,18,20,21,22,24,25,26,28,29,30,32,33,34,36,37,38,40,41,42,44,45,46,48,49,50,52,53,54,56,57,58};
 
 llama_memory_status llama_memory_status_combine(llama_memory_status s0, llama_memory_status s1) {
     bool has_update = false;
