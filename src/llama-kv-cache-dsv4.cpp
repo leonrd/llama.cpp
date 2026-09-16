@@ -14,6 +14,7 @@
 #include <map>
 #include <sstream>
 #include <stdexcept>
+#include <regex>
 
 static constexpr uint32_t DSV4_CSA_RATIO = 4;
 static constexpr uint32_t DSV4_HCA_RATIO = 128;
@@ -893,6 +894,7 @@ static void dsv4_make_k_only(llama_hparams & hparams) {
 llama_dsv4_comp_state::llama_dsv4_comp_state(
         const llama_model & model,
                 bool        offload,
+                const       llama_model_kv_buft_override * kv_buft_overrides,
                 bool        unified,
             uint32_t        n_seq_max,
             uint32_t        ratio,
@@ -952,6 +954,28 @@ llama_dsv4_comp_state::llama_dsv4_comp_state(
             buft = ggml_backend_dev_buffer_type(dev);
 
             dev_name = ggml_backend_dev_name(dev);
+
+            if (kv_buft_overrides) {
+                std::string layer_name = std::to_string(il);
+                for (const auto * overrides = kv_buft_overrides; overrides->pattern != nullptr; ++overrides) {
+                    std::regex pattern(overrides->pattern);
+                    if (std::regex_search(layer_name, pattern)) {
+                        buft = overrides->buft;
+                        
+                        if (overrides->buft == ggml_backend_cpu_buffer_type()) {
+                            dev_name = "CPU";
+                        } else {
+                            auto * buft_dev = ggml_backend_buft_get_device(overrides->buft);
+                            dev_name = ggml_backend_dev_name(buft_dev);
+                        }
+
+                        LLAMA_LOG_DEBUG("DSV4 compressor state layer %3d buffer type overridden to %s\n",
+                            il,
+                            ggml_backend_buft_name(buft));
+                        break;
+                    }
+                }
+            }
         }
 
         LLAMA_LOG_DEBUG("%s: layer %3d: dev = %s\n", __func__, il, dev_name);
@@ -1213,6 +1237,7 @@ llama_kv_cache_dsv4::llama_kv_cache_dsv4(
                 ggml_type   type_v,
                      bool   v_trans,
                      bool   offload,
+                     const  llama_model_kv_buft_override * kv_buft_overrides,
                      bool   swa_full,
                      bool   unified,
                  uint32_t   kv_size,
@@ -1254,7 +1279,7 @@ llama_kv_cache_dsv4::llama_kv_cache_dsv4(
 
     kv_raw = std::make_unique<llama_kv_cache_iswa>(
             model, hparams_raw, type_k, type_v,
-            v_trans, offload, swa_full, unified_raw, kv_size, n_seq_max, n_ubatch, n_pad,
+            v_trans, offload, kv_buft_overrides, swa_full, unified_raw, kv_size, n_seq_max, n_ubatch, n_pad,
             nullptr, filter_raw, reuse, nullptr);
 
     dsv4_make_k_only(hparams_csa);
@@ -1291,7 +1316,7 @@ llama_kv_cache_dsv4::llama_kv_cache_dsv4(
 
     kv_csa = std::make_unique<llama_kv_cache>(
             model, hparams_csa, type_k, type_v,
-            v_trans, offload, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_CSA_RATIO), 256u), n_seq_max, n_pad,
+            v_trans, offload, kv_buft_overrides, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_CSA_RATIO), 256u), n_seq_max, n_pad,
             0, LLAMA_SWA_TYPE_NONE, nullptr, filter_csa, nullptr, nullptr);
 
     LLAMA_LOG_INFO("%s: creating DSV4 HCA compressed KV cache, size = %u cells\n",
@@ -1299,7 +1324,7 @@ llama_kv_cache_dsv4::llama_kv_cache_dsv4(
 
     kv_hca = std::make_unique<llama_kv_cache>(
             model, hparams_hca, type_k, type_v,
-            v_trans, offload, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_HCA_RATIO), 256u), n_seq_max, n_pad,
+            v_trans, offload, kv_buft_overrides, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_HCA_RATIO), 256u), n_seq_max, n_pad,
             0, LLAMA_SWA_TYPE_NONE, nullptr, filter_hca, nullptr, nullptr);
 
     LLAMA_LOG_INFO("%s: creating DSV4 lightning-indexer KV cache, size = %u cells\n",
@@ -1307,25 +1332,25 @@ llama_kv_cache_dsv4::llama_kv_cache_dsv4(
 
     kv_lid = std::make_unique<llama_kv_cache>(
             model, hparams_lid, type_k, type_v,
-            v_trans, offload, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_CSA_RATIO), 256u), n_seq_max, n_pad,
+            v_trans, offload, kv_buft_overrides, unified_compressed, GGML_PAD(dsv4_comp_size(kv_size, DSV4_CSA_RATIO), 256u), n_seq_max, n_pad,
             0, LLAMA_SWA_TYPE_NONE, nullptr, filter_csa, nullptr, nullptr);
 
     LLAMA_LOG_INFO("%s: creating DSV4 CSA compressor state\n", __func__);
 
     csa_state = std::make_unique<llama_dsv4_comp_state>(
-            model, offload, unified_compressed, n_seq_max, DSV4_CSA_RATIO, 2*DSV4_CSA_RATIO,
+            model, offload, kv_buft_overrides, unified_compressed, n_seq_max, DSV4_CSA_RATIO, 2*DSV4_CSA_RATIO,
             2*model.hparams.n_embd_head_k(), n_rs_seq, "csa", filter_csa);
 
     LLAMA_LOG_INFO("%s: creating DSV4 HCA compressor state\n", __func__);
 
     hca_state = std::make_unique<llama_dsv4_comp_state>(
-            model, offload, unified_compressed, n_seq_max, DSV4_HCA_RATIO, DSV4_HCA_RATIO,
+            model, offload, kv_buft_overrides, unified_compressed, n_seq_max, DSV4_HCA_RATIO, DSV4_HCA_RATIO,
             model.hparams.n_embd_head_k(), n_rs_seq, "hca", filter_hca);
 
     LLAMA_LOG_INFO("%s: creating DSV4 lightning-indexer compressor state\n", __func__);
 
     lid_state = std::make_unique<llama_dsv4_comp_state>(
-            model, offload, unified_compressed, n_seq_max, DSV4_CSA_RATIO, 2*DSV4_CSA_RATIO,
+            model, offload, kv_buft_overrides, unified_compressed, n_seq_max, DSV4_CSA_RATIO, 2*DSV4_CSA_RATIO,
             2*model.hparams.indexer_head_size, n_rs_seq, "lid", filter_csa);
 
     // DSV4 attention reads compressed-K / compressor-state rows that the current

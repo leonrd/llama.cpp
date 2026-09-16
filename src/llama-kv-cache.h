@@ -103,6 +103,7 @@ public:
                     ggml_type   type_v,
                          bool   v_trans,
                          bool   offload,
+                        const   llama_model_kv_buft_override * kv_buft_overrides,
                          bool   unified,
                      uint32_t   kv_size,
                      uint32_t   n_seq_max,

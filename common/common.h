@@ -347,6 +347,7 @@ struct common_params_speculative_draft {
     std::vector<ggml_backend_dev_t> devices; // devices to use for offloading
 
     std::vector<llama_model_tensor_buft_override> tensor_buft_overrides;
+    std::vector<llama_model_kv_buft_override> kv_buft_overrides;
 };
 
 struct common_params_speculative_ngram_mod {
@@ -576,6 +577,7 @@ struct common_params {
     bool verbose_prompt    = false; // print prompt tokens before generation
     bool display_prompt    = true;  // print prompt before generation
     bool no_kv_offload     = false; // disable KV offloading
+    std::vector<llama_model_kv_buft_override> kv_buft_overrides;
     bool warmup            = true;  // warmup run
     bool check_tensors     = false; // validate tensor data
     bool no_op_offload     = false; // globally disable offload host tensor operations to device

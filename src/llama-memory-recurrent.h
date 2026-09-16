@@ -21,6 +21,7 @@ public:
                     ggml_type   type_r,
                     ggml_type   type_s,
                          bool   offload,
+                        const   llama_model_kv_buft_override * kv_buft_overrides,
                      uint32_t   mem_size,
                      uint32_t   n_seq_max,
                      uint32_t   n_rs_seq,

@@ -97,6 +97,7 @@ int main(int argc, char ** argv) {
 
     params.cpuparams_batch.n_threads = params.speculative.draft.cpuparams_batch.n_threads;
     params.tensor_buft_overrides     = params.speculative.draft.tensor_buft_overrides;
+    params.kv_buft_overrides         = params.speculative.draft.kv_buft_overrides;
 
     auto llama_init_dft = common_init_from_params(params);
 

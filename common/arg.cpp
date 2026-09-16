@@ -283,6 +283,41 @@ static void parse_tensor_buffer_overrides(const std::string & value, std::vector
     }
 }
 
+// Helper function to parse kv buffer override strings
+static void parse_kv_buffer_overrides(const std::string & value, std::vector<llama_model_kv_buft_override> & overrides) {
+    ggml_backend_load_all();
+
+    std::map<std::string, ggml_backend_buffer_type_t> buft_list;
+    for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
+        auto * dev = ggml_backend_dev_get(i);
+        auto * buft = ggml_backend_dev_buffer_type(dev);
+        if (buft) {
+            buft_list[ggml_backend_buft_name(buft)] = buft;
+        }
+    }
+
+    for (const auto & override : string_split<std::string>(value, ',')) {
+        std::string::size_type pos = override.find('=');
+        if (pos == std::string::npos) {
+            throw std::invalid_argument("invalid value");
+        }
+        std::string kv_layer_name = override.substr(0, pos);
+        std::string buffer_type = override.substr(pos + 1);
+
+        if (buft_list.find(buffer_type) == buft_list.end()) {
+            printf("Available buffer types:\n");
+            for (const auto & it : buft_list) {
+                printf("  %s\n", ggml_backend_buft_name(it.second));
+            }
+            throw std::invalid_argument("unknown buffer type");
+        }
+        // keep strings alive and avoid leaking memory by storing them in a static vector
+        static std::list<std::string> buft_overrides;
+        buft_overrides.push_back(kv_layer_name);
+        overrides.push_back({buft_overrides.back().c_str(), buft_list.at(buffer_type)});
+    }
+}
+
 static std::string clean_file_name(const std::string & fname) {
     std::string clean_fname = fname;
     string_replace_all(clean_fname, "\\", "_");
@@ -945,6 +980,15 @@ static bool common_params_parse_ex(int argc, char ** argv, common_params_context
 
     if (!params.speculative.draft.tensor_buft_overrides.empty()) {
         params.speculative.draft.tensor_buft_overrides.push_back({nullptr, nullptr});
+    }
+
+    // pad kv_buft_overrides for llama_params_fit:
+    while (params.kv_buft_overrides.size() < ntbo) {
+        params.kv_buft_overrides.push_back({nullptr, nullptr});
+    }
+
+    if (!params.speculative.draft.kv_buft_overrides.empty()) {
+        params.speculative.draft.kv_buft_overrides.push_back({nullptr, nullptr});
     }
 
     if (!params.chat_template.empty() && !common_chat_verify_template(params.chat_template, params.use_jinja)) {
@@ -2415,6 +2459,12 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
             params.no_kv_offload = !value;
         }
     ).set_env("LLAMA_ARG_KV_OFFLOAD"));
+    add_opt(common_arg(
+        {"-okvc", "--override-kv-cache"}, "<layer index pattern>=<buffer type>,...",
+        "override kv cache buffer type", [](common_params & params, const std::string & value) {
+            parse_kv_buffer_overrides(value, params.kv_buft_overrides);
+        }
+    ).set_env("LLAMA_ARG_OVERRIDE_KV_CACHE"));
     add_opt(common_arg(
         {"--repack"},
         {"-nr", "--no-repack"},
@@ -4112,6 +4162,12 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
         {"--spec-draft-override-tensor", "-otd", "--override-tensor-draft"}, "<tensor name pattern>=<buffer type>,...",
         "override tensor buffer type for draft model", [](common_params & params, const std::string & value) {
             parse_tensor_buffer_overrides(value, params.speculative.draft.tensor_buft_overrides);
+        }
+    ).set_spec().set_examples({LLAMA_EXAMPLE_SPECULATIVE, LLAMA_EXAMPLE_SERVER, LLAMA_EXAMPLE_CLI}));
+    add_opt(common_arg(
+        {"--spec-draft-override-kv-cache", "-okvcd", "--override-kv-cache-draft"}, "<layer index pattern>=<buffer type>,...",
+        "override kv cache buffer type for draft model", [](common_params & params, const std::string & value) {
+            parse_kv_buffer_overrides(value, params.speculative.draft.kv_buft_overrides);
         }
     ).set_spec().set_examples({LLAMA_EXAMPLE_SPECULATIVE, LLAMA_EXAMPLE_SERVER, LLAMA_EXAMPLE_CLI}));
     add_opt(common_arg(

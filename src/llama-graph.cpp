@@ -2726,7 +2726,7 @@ ggml_tensor * llm_graph_context::build_attn_mha(
         // recombine streams
         cur = ggml_cont_2d(ctx0, cur, cur->ne[0]*cur->ne[1], cur->ne[2]*cur->ne[3]);
 
-        if (!cparams.offload_kqv) {
+        if (!cparams.offload_kqv || (cparams.kv_buft_overrides && cparams.kv_buft_overrides[0].pattern)) {
             // all nodes between the KV store and the attention output are run on the CPU
             ggml_backend_sched_set_tensor_backend(sched, cur, backend_cpu);
         }

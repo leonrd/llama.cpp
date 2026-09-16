@@ -12,6 +12,7 @@
 #include <limits>
 #include <map>
 #include <stdexcept>
+#include <regex>
 
 //
 // llama_memory_recurrent
@@ -22,6 +23,7 @@ llama_memory_recurrent::llama_memory_recurrent(
                 ggml_type   type_r,
                 ggml_type   type_s,
                      bool   offload,
+                    const   llama_model_kv_buft_override * kv_buft_overrides,
                  uint32_t   mem_size,
                  uint32_t   n_seq_max,
                  uint32_t   n_rs_seq,
@@ -89,6 +91,28 @@ llama_memory_recurrent::llama_memory_recurrent(
             buft = ggml_backend_dev_buffer_type(dev);
 
             dev_name = ggml_backend_dev_name(dev);
+
+            if (kv_buft_overrides) {
+                std::string layer_name = std::to_string(i);
+                for (const auto * overrides = kv_buft_overrides; overrides->pattern != nullptr; ++overrides) {
+                    std::regex pattern(overrides->pattern);
+                    if (std::regex_search(layer_name, pattern)) {
+                        buft = overrides->buft;
+                        
+                        if (overrides->buft == ggml_backend_cpu_buffer_type()) {
+                            dev_name = "CPU";
+                        } else {
+                            auto * buft_dev = ggml_backend_buft_get_device(overrides->buft);
+                            dev_name = ggml_backend_dev_name(buft_dev);
+                        }
+
+                        LLAMA_LOG_DEBUG("rs cache layer %3d buffer type overridden to %s\n",
+                            i,
+                            ggml_backend_buft_name(buft));
+                        break;
+                    }
+                }
+            }
         }
 
         LLAMA_LOG_DEBUG("%s, layer %3d: dev = %s\n", __func__, i, dev_name);

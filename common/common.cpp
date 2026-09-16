@@ -1743,6 +1743,14 @@ struct llama_context_params common_context_params_to_llama(const common_params &
     cparams.cb_eval           = params.cb_eval;
     cparams.cb_eval_user_data = params.cb_eval_user_data;
     cparams.offload_kqv       = !params.no_kv_offload;
+
+    if (params.kv_buft_overrides.empty()) {
+        cparams.kv_buft_overrides = NULL;
+    } else {
+        GGML_ASSERT(params.kv_buft_overrides.back().pattern == nullptr && "KV buffer overrides not terminated with empty pattern");
+        cparams.kv_buft_overrides = params.kv_buft_overrides.data();
+    }
+
     cparams.no_perf           = params.no_perf;
     cparams.op_offload        = !params.no_op_offload;
     cparams.swa_full          = params.swa_full;
