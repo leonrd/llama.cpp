@@ -37,6 +37,7 @@ struct llama_cparams {
     bool embeddings_nextn_masked; // extract for only rows where batch.logits != 0
     bool causal_attn;
     bool offload_kqv;
+    const struct llama_model_kv_buft_override * kv_buft_overrides;
     bool flash_attn;
     bool auto_fa;
     bool fused_gdn_ar;       // use fused gated delta net (autoregressive)

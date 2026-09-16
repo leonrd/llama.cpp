@@ -17,6 +17,7 @@ llama_kv_cache_dsa_iswa::llama_kv_cache_dsa_iswa(
                 ggml_type   type_v,
                      bool   v_trans,
                      bool   offload,
+                     const  llama_model_kv_buft_override * kv_buft_overrides,
                      bool   swa_full,
                      bool   unified,
                  uint32_t   kv_size,
@@ -64,14 +65,14 @@ llama_kv_cache_dsa_iswa::llama_kv_cache_dsa_iswa(
 
     kv_dsa = std::make_unique<llama_kv_cache_dsa>(
             model, type_k, type_v,
-            v_trans, offload, unified, size_dsa, n_seq_max, n_pad,
+            v_trans, offload, kv_buft_overrides, unified, size_dsa, n_seq_max, n_pad,
             0, LLAMA_SWA_TYPE_NONE, filter_dsa, filter_lid, reuse);
 
     LLAMA_LOG_INFO("%s: creating SWA KV cache, size = %u cells\n", __func__, size_swa);
 
     kv_swa = std::make_unique<llama_kv_cache>(
             model, hparams, type_k, type_v,
-            v_trans, offload, unified, size_swa, n_seq_max, n_pad,
+            v_trans, offload, kv_buft_overrides, unified, size_swa, n_seq_max, n_pad,
             hparams.n_swa, hparams.swa_type, nullptr, filter_swa, reuse, nullptr);
 }
 
