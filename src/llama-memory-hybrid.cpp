@@ -31,6 +31,18 @@ llama_memory_hybrid::llama_memory_hybrid(
     const layer_filter_cb & filter_attn,
     const layer_filter_cb & filter_recr) :
     hparams(model.hparams),
+    mem_recr(new llama_memory_recurrent(
+        model,
+        type_r,
+        type_s,
+        offload,
+        rs_size,
+        n_seq_max,
+        n_rs_seq,
+        filter_recr == nullptr ?
+            [&](int32_t il) { return hparams.is_recr(il); }
+            : filter_recr
+    )),
     mem_attn(new llama_kv_cache(
         model,
         model.hparams,
@@ -50,18 +62,6 @@ llama_memory_hybrid::llama_memory_hybrid(
             : filter_attn,
         nullptr,
         nullptr
-    )),
-    mem_recr(new llama_memory_recurrent(
-        model,
-        type_r,
-        type_s,
-        offload,
-        rs_size,
-        n_seq_max,
-        n_rs_seq,
-        filter_recr == nullptr ?
-            [&](int32_t il) { return hparams.is_recr(il); }
-            : filter_recr
     )) {}
 
 llama_memory_context_ptr llama_memory_hybrid::init_batch(llama_batch_allocr & balloc, uint32_t n_ubatch, bool embd_all) {
@@ -201,12 +201,12 @@ void llama_memory_hybrid::state_read(llama_io_read_i & io, llama_seq_id seq_id, 
     mem_recr->state_read(io, seq_id, flags);
 }
 
-llama_kv_cache * llama_memory_hybrid::get_mem_attn() const {
-    return mem_attn.get();
-}
-
 llama_memory_recurrent * llama_memory_hybrid::get_mem_recr() const {
     return mem_recr.get();
+}
+
+llama_kv_cache * llama_memory_hybrid::get_mem_attn() const {
+    return mem_attn.get();
 }
 
 llama_memory_hybrid_context::llama_memory_hybrid_context(llama_memory_status status) : status(status) {}
