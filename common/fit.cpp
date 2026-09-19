@@ -282,11 +282,23 @@ static void common_params_fit_impl(
 
     std::vector<int64_t> margins; // this function uses int64_t rather than size_t for memory sizes to more conveniently handle deficits
     margins.reserve(nd);
+
     if (nd == 0) {
-        margins.push_back(margins_s[0]);
+        for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+            auto * backend_dev = ggml_backend_dev_get(i);
+            if (ggml_backend_dev_type(backend_dev) == GGML_BACKEND_DEVICE_TYPE_CPU) {
+                margins.push_back(margins_s[i]);
+                break;
+            }
+        }
     } else {
-        for (size_t id = 0; id < nd; id++) {
-            margins.push_back(margins_s[id]);
+        for (auto & dev : devs) {
+            for (size_t i = 0; i < ggml_backend_dev_count(); i++) {
+                if (ggml_backend_dev_get(i) == dev) {
+                    margins.push_back(margins_s[i]);
+                    break;
+                }
+            }
         }
     }
 
