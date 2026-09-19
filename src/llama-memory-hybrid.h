@@ -80,14 +80,14 @@ public:
     // llama_memory_hybrid specific API
     //
 
-    llama_kv_cache * get_mem_attn() const;
     llama_memory_recurrent * get_mem_recr() const;
+    llama_kv_cache * get_mem_attn() const;
 
 private:
     const llama_hparams & hparams;
 
-    const std::unique_ptr<llama_kv_cache> mem_attn;
     const std::unique_ptr<llama_memory_recurrent> mem_recr;
+    const std::unique_ptr<llama_kv_cache> mem_attn;
 };
 
 class llama_memory_hybrid_context : public llama_memory_context_i {
