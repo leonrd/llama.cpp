@@ -19,6 +19,7 @@ llama_kv_cache_iswa::llama_kv_cache_iswa(
                      bool   v_trans,
                      bool   offload,
                      bool   swa_full,
+                     const  llama_model_tensor_buft_override * tensor_buft_overrides,
                      bool   unified,
                  uint32_t   kv_size,
                  uint32_t   n_seq_max,
@@ -27,7 +28,7 @@ llama_kv_cache_iswa::llama_kv_cache_iswa(
     const layer_filter_cb & filter,
     const  layer_reuse_cb & reuse,
     const  layer_share_cb & share) :
-    llama_kv_cache_iswa(model, no_alloc, model.hparams, type_k, type_v, v_trans, offload, swa_full, unified,
+    llama_kv_cache_iswa(model, no_alloc, model.hparams, type_k, type_v, v_trans, offload, swa_full, tensor_buft_overrides, unified,
             kv_size, n_seq_max, n_ubatch, mem_other, filter, reuse, share) {
 }
 
@@ -40,6 +41,7 @@ llama_kv_cache_iswa::llama_kv_cache_iswa(
                      bool   v_trans,
                      bool   offload,
                      bool   swa_full,
+                     const  llama_model_tensor_buft_override * tensor_buft_overrides,
                      bool   unified,
                  uint32_t   kv_size,
                  uint32_t   n_seq_max,
@@ -94,14 +96,14 @@ llama_kv_cache_iswa::llama_kv_cache_iswa(
 
     kv_base = std::make_unique<llama_kv_cache>(
             model, no_alloc, hparams, type_k, type_v,
-            v_trans, offload, unified, size_base, n_seq_max,
+            v_trans, offload, tensor_buft_overrides, unified, size_base, n_seq_max,
             0, LLAMA_SWA_TYPE_NONE, mem_other_base, filter_base, reuse, share);
 
     LLAMA_LOG_INFO("%s: creating     SWA KV cache, size = %u cells\n", __func__, size_swa);
 
     kv_swa = std::make_unique<llama_kv_cache>(
             model, no_alloc, hparams, type_k, type_v,
-            v_trans, offload, unified, size_swa, n_seq_max,
+            v_trans, offload, tensor_buft_overrides, unified, size_swa, n_seq_max,
             hparams.n_swa, hparams.swa_type, mem_other_swa, filter_swa, reuse, share);
 }
 
