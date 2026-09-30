@@ -2350,13 +2350,15 @@ void common_prompt_checkpoint::update_dft(
         return;
     }
 
-    const size_t ckpt_size = llama_state_seq_get_size_ext(ctx, seq_id, flags);
+    if ((flags & LLAMA_STATE_SEQ_FLAGS_PARTIAL_ONLY) == 0) {
+        const size_t ckpt_size = llama_state_seq_get_size_ext(ctx, seq_id, flags);
 
-    data_dft.resize(ckpt_size);
+        data_dft.resize(ckpt_size);
 
-    const size_t n = llama_state_seq_get_data_ext(ctx, data_dft.data(), ckpt_size, seq_id, flags);
-    if (n != ckpt_size) {
-        GGML_ABORT("checkpoint size mismatch: expected %zu, got %zu\n", ckpt_size, n);
+        const size_t n = llama_state_seq_get_data_ext(ctx, data_dft.data(), ckpt_size, seq_id, flags);
+        if (n != ckpt_size) {
+            GGML_ABORT("checkpoint size mismatch: expected %zu, got %zu\n", ckpt_size, n);
+        }
     }
 }
 
