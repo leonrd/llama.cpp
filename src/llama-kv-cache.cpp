@@ -13,6 +13,7 @@
 #include <map>
 #include <stdexcept>
 #include <unordered_map>
+#include <regex>
 
 static bool ggml_is_power_of_2(int n) {
     return (n & (n - 1)) == 0;
@@ -69,6 +70,7 @@ llama_kv_cache::llama_kv_cache(
                 ggml_type   type_v,
                      bool   v_trans,
                      bool   offload,
+                    const   llama_model_tensor_buft_override * tensor_buft_overrides,
                      bool   unified,
                  uint32_t   kv_size,
                  uint32_t   n_seq_max,
@@ -218,6 +220,28 @@ llama_kv_cache::llama_kv_cache(
             buft = ggml_backend_dev_buffer_type(dev);
 
             dev_name = ggml_backend_dev_name(dev);
+
+            if (tensor_buft_overrides) {
+                char layer_name_buf[GGML_MAX_NAME];
+                snprintf(layer_name_buf, sizeof(layer_name_buf), "cache_%skv_l%d", name_tag, il);
+                std::string layer_name = layer_name_buf;
+                for (const auto * overrides = tensor_buft_overrides; overrides->pattern != nullptr; ++overrides) {
+                    std::regex pattern(overrides->pattern);
+                    if (std::regex_search(layer_name, pattern)) {
+                        buft = overrides->buft;
+                        
+                        if (overrides->buft == ggml_backend_cpu_buffer_type()) {
+                            dev_name = "CPU";
+                        } else {
+                            auto * buft_dev = ggml_backend_buft_get_device(overrides->buft);
+                            dev_name = ggml_backend_dev_name(buft_dev);
+                        }
+
+                        LLAMA_LOG_WARN("%s: layer %3d: buffer type overridden to %s\n", __func__, il, ggml_backend_buft_name(buft));
+                        break;
+                    }
+                }
+            }
         }
 
         LLAMA_LOG_DEBUG("%s: layer %3d: dev = %s\n", __func__, il, dev_name);
