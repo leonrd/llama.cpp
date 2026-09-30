@@ -35,6 +35,7 @@ public:
                  uint32_t   n_rs_seq,
                      bool   rs_replay,
                      bool   offload,
+                    const   llama_model_tensor_buft_override * tensor_buft_overrides,
                      bool   unified,
                             /* layer filters */
     const layer_filter_cb & filter_attn,
