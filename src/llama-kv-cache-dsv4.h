@@ -97,6 +97,7 @@ public:
                          bool   v_trans,
                          bool   offload,
                          bool   swa_full,
+                        const   llama_model_tensor_buft_override * tensor_buft_overrides,
                          bool   unified,
                      uint32_t   kv_size,
                      uint32_t   n_seq_max,
