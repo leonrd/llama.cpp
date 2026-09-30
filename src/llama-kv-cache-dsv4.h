@@ -17,6 +17,7 @@ public:
     llama_dsv4_comp_state(
             const llama_model & model,
             bool            offload,
+            bool            offload_host,
             bool            unified,
             uint32_t        n_seq_max,
             uint32_t        ratio,
@@ -93,6 +94,7 @@ public:
                     ggml_type   type_v,
                          bool   v_trans,
                          bool   offload,
+                         bool   offload_host,
                          bool   swa_full,
                          bool   unified,
                      uint32_t   kv_size,

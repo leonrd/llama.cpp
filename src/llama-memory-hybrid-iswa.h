@@ -36,6 +36,7 @@ public:
                  uint32_t   n_seq_max,
                  uint32_t   n_rs_seq,
                      bool   offload,
+                     bool   offload_host,
                      bool   unified,
                             /* layer filters */
     const layer_filter_cb & filter_attn = nullptr,

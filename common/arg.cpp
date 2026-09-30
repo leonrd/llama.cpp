@@ -2419,6 +2419,14 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
         }
     ).set_env("LLAMA_ARG_KV_OFFLOAD"));
     add_opt(common_arg(
+        {"-kvoh", "--kv-offload-host"},
+        {"-nkvoh", "--no-kv-offload-host"},
+        string_format("whether to use host buffers for KV cache offloading (default: %s)", params.kv_offload_host ? "enabled" : "disabled"),
+        [](common_params & params, bool value) {
+            params.kv_offload_host = value;
+        }
+    ).set_env("LLAMA_ARG_KV_OFFLOAD_HOST"));
+    add_opt(common_arg(
         {"--repack"},
         {"-nr", "--no-repack"},
         string_format("whether to enable weight repacking (default: %s)", params.no_extra_bufts ? "disabled" : "enabled"),
@@ -4118,6 +4126,14 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
             parse_tensor_buffer_overrides(value, params.speculative.draft.tensor_buft_overrides);
         }
     ).set_spec().set_examples({LLAMA_EXAMPLE_SPECULATIVE, LLAMA_EXAMPLE_SERVER, LLAMA_EXAMPLE_CLI}));
+    add_opt(common_arg(
+        {"--spec-draft-kv-offload-host", "-kvohd", "--kv-offload-host-draft"},
+        {"--no-spec-draft-kv-offload-host", "-nkvohd", "--no-kv-offload-host-draft"},
+        string_format("whether to use host buffers for KV cache offloading for the draft model (default: %s)", params.speculative.draft.kv_offload_host ? "enabled" : "disabled"),
+        [](common_params & params, bool value) {
+            params.speculative.draft.kv_offload_host = value;
+        }
+    ).set_env("LLAMA_ARG_SPEC_DRAFT_KV_OFFLOAD_HOST"));
     add_opt(common_arg(
         {"--spec-draft-cpu-moe", "-cmoed", "--cpu-moe-draft"},
         "keep all Mixture of Experts (MoE) weights in the CPU for the draft model",

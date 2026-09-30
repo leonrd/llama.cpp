@@ -13,6 +13,7 @@
 #include <map>
 #include <stdexcept>
 #include <unordered_map>
+#include <regex>
 
 static bool ggml_is_power_of_2(int n) {
     return (n & (n - 1)) == 0;
@@ -69,6 +70,7 @@ llama_kv_cache::llama_kv_cache(
                 ggml_type   type_v,
                      bool   v_trans,
                      bool   offload,
+                     bool   offload_host,
                      bool   unified,
                  uint32_t   kv_size,
                  uint32_t   n_seq_max,
@@ -209,18 +211,21 @@ llama_kv_cache::llama_kv_cache(
         const uint32_t n_embd_k_gqa =            hparams.n_embd_k_gqa(il);
         const uint32_t n_embd_v_gqa = !v_trans ? hparams.n_embd_v_gqa(il) : hparams.n_embd_v_gqa_max();
 
-        const char * dev_name = "CPU";
-
+        ggml_backend_dev_t dev = ggml_backend_dev_by_type(GGML_BACKEND_DEVICE_TYPE_CPU);
         ggml_backend_buffer_type_t buft = ggml_backend_cpu_buffer_type();
 
         if (offload) {
-            auto * dev = model.dev_layer(il);
-            buft = ggml_backend_dev_buffer_type(dev);
-
-            dev_name = ggml_backend_dev_name(dev);
+            dev = model.dev_layer(il);
+            if (offload_host) {
+                buft = ggml_backend_dev_host_buffer_type(dev);
+            } else {
+                buft = ggml_backend_dev_buffer_type(dev);
+            }
         }
 
-        LLAMA_LOG_DEBUG("%s: layer %3d: dev = %s\n", __func__, il, dev_name);
+        const char * dev_name = ggml_backend_dev_name(dev);
+
+        LLAMA_LOG_DEBUG("%s: layer %3d: dev = %s, offload = %d, offload_host = %d\n", __func__, il, dev_name, offload, offload_host);
 
         ggml_context * ctx = ctx_for_buft(buft);
         if (!ctx) {
