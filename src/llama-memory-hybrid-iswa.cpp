@@ -26,6 +26,7 @@ llama_memory_hybrid_iswa::llama_memory_hybrid_iswa(
                  uint32_t   n_seq_max,
                  uint32_t   n_rs_seq,
                      bool   offload,
+                    const   llama_model_tensor_buft_override * tensor_buft_overrides,
                      bool   unified,
                             /* layer filters */
     const layer_filter_cb & filter_attn,
@@ -37,6 +38,7 @@ llama_memory_hybrid_iswa::llama_memory_hybrid_iswa(
         type_v,
         v_trans,
         offload,
+        tensor_buft_overrides,
         swa_full,
         unified,
         kv_size,
@@ -55,6 +57,7 @@ llama_memory_hybrid_iswa::llama_memory_hybrid_iswa(
         type_r,
         type_s,
         offload,
+        tensor_buft_overrides,
         rs_size,
         n_seq_max,
         n_rs_seq,
