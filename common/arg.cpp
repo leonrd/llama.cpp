@@ -4113,6 +4113,14 @@ common_params_context common_params_parser_init(common_params & params, llama_ex
         }
     ).set_env("LLAMA_ARG_SPEC_DRAFT_CACHE_TYPE_V"));
     add_opt(common_arg(
+        {"--spec-draft-kv-offload", "-kvod", "--kv-offload-draft"},
+        {"--no-spec-draft-kv-offload", "-nkvod", "--no-kv-offload-draft"},
+        string_format("whether to enable KV cache offloading for the draft model (default: %s)", params.speculative.draft.no_kv_offload ? "disabled" : "enabled"),
+        [](common_params & params, bool value) {
+            params.speculative.draft.no_kv_offload = !value;
+        }
+    ).set_env("LLAMA_ARG_SPEC_DRAFT_KV_OFFLOAD"));
+    add_opt(common_arg(
         {"--spec-draft-override-tensor", "-otd", "--override-tensor-draft"}, "<tensor name pattern>=<buffer type>,...",
         "override tensor buffer type for draft model", [](common_params & params, const std::string & value) {
             parse_tensor_buffer_overrides(value, params.speculative.draft.tensor_buft_overrides);

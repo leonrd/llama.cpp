@@ -342,6 +342,7 @@ struct common_params_speculative_draft {
 
     ggml_type cache_type_k = GGML_TYPE_F16; // KV cache data type for the K
     ggml_type cache_type_v = GGML_TYPE_F16; // KV cache data type for the V
+    bool no_kv_offload     = false; // disable KV offloading
 
     common_cpu_params cpuparams;
     common_cpu_params cpuparams_batch;
