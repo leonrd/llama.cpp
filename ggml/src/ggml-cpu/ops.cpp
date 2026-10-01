@@ -8839,6 +8839,9 @@ void ggml_compute_forward_top_k(
     }
 }
 
+// added to the running KQ maximum so every softmax weight stays <= 1/8 and the F16 VKQ accumulator stays in range, same value as the CUDA and Vulkan kernels
+#define FATTN_KQ_MAX_OFFSET (3.0f*0.6931f)
+
 static void ggml_compute_forward_flash_attn_ext_f16_one_chunk(
         const ggml_compute_params * params,
         ggml_tensor * dst,
@@ -8990,32 +8993,32 @@ static void ggml_compute_forward_flash_attn_ext_f16_one_chunk(
             const char * v_data = ((const char *) v->data + (ic*nbv1 + iv2*nbv2 + iv3*nbv3));
 
             if (v->type == GGML_TYPE_F16) {
-                if (s > M) {
-                    // s is new maximum, ms < 1.0f, vs == expf(s - s) == 1.0f
-                    M = s;
+                if (s + FATTN_KQ_MAX_OFFSET > M) {
+                    // s + FATTN_KQ_MAX_OFFSET is new maximum, ms < 1.0f
+                    M = s + FATTN_KQ_MAX_OFFSET;
                     ms = expf(Mold - M);
 
                     // V = V*expf(Mold - M)
                     ggml_vec_scale_f16(DV, VKQ16, ms);
-                } else {
-                    // no new maximum, ms == 1.0f, vs != 1.0f
-                    vs = expf(s - M);
                 }
+
+                // vs <= expf(-FATTN_KQ_MAX_OFFSET) == 1/8
+                vs = expf(s - M);
 
                 // V += v*expf(s - M)
                 ggml_vec_mad_f16(DV, VKQ16, (const ggml_fp16_t *) v_data, vs);
             } else {
-                if (s > M) {
-                    // s is new maximum, ms < 1.0f, vs == expf(s - s) == 1.0f
-                    M = s;
+                if (s + FATTN_KQ_MAX_OFFSET > M) {
+                    // s + FATTN_KQ_MAX_OFFSET is new maximum, ms < 1.0f
+                    M = s + FATTN_KQ_MAX_OFFSET;
                     ms = expf(Mold - M);
 
                     // V = V*expf(Mold - M)
                     ggml_vec_scale_f32(DV, VKQ32, ms);
-                } else {
-                    // no new maximum, ms == 1.0f, vs != 1.0f
-                    vs = expf(s - M);
                 }
+
+                // vs <= expf(-FATTN_KQ_MAX_OFFSET) == 1/8
+                vs = expf(s - M);
 
                 // V += v*expf(s - M)
                 if (v_to_float) {
