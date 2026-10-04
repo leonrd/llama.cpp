@@ -45,27 +45,31 @@ llama_memory_hybrid::llama_memory_hybrid(
             [&](int32_t il) { return hparams.is_recr(il); }
             : filter_recr
     )),
-    mem_attn(new llama_kv_cache(
-        model,
-        model.hparams,
-        type_k,
-        type_v,
-        v_trans,
-        offload,
-        tensor_buft_overrides,
-        unified,
-        kv_size,
-        n_seq_max,
-        n_pad,
-        n_swa,
-        swa_type,
-        nullptr,
-        filter_attn == nullptr ?
-            [&](int32_t il) { return !hparams.is_recr(il); }
-            : filter_attn,
-        nullptr,
-        nullptr
-    )) {}
+    mem_attn([&]() {
+        setenv("GGML_VK_PREFER_HOST_MEMORY", "1", true);
+        auto mem_attn = std::make_unique<llama_kv_cache>(
+            model,
+            model.hparams,
+            type_k,
+            type_v,
+            v_trans,
+            offload,
+            tensor_buft_overrides,
+            unified,
+            kv_size,
+            n_seq_max,
+            n_pad,
+            n_swa,
+            swa_type,
+            nullptr,
+            filter_attn == nullptr ?
+                [&](int32_t il) { return !hparams.is_recr(il); }
+                : filter_attn,
+            nullptr,
+            nullptr);
+        unsetenv("GGML_VK_PREFER_HOST_MEMORY");
+        return mem_attn;
+    }()) {}
 
 llama_memory_context_ptr llama_memory_hybrid::init_batch(llama_batch_allocr & balloc, uint32_t n_ubatch, bool embd_all) {
     do {
