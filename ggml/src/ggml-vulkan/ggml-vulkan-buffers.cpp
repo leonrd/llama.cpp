@@ -195,7 +195,7 @@ vk_buffer ggml_vk_create_buffer_check(vk_device& device, size_t size, vk::Memory
 vk_buffer ggml_vk_create_buffer_device(vk_device& device, size_t size) {
     vk_buffer buf;
     try {
-        if (device->prefer_host_memory) {
+        if (getenv("GGML_VK_PREFER_HOST_MEMORY") != nullptr) {
             buf = ggml_vk_create_buffer(device, size, {vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
                                                        vk::MemoryPropertyFlagBits::eDeviceLocal});
         } else if (device->uma) {
